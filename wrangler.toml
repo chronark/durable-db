@@ -1,0 +1,32 @@
+name = "worker"
+type = "javascript"
+
+account_id = ""
+workers_dev = true
+# route = ""
+# zone_id = ""
+
+compatibility_date = "2022-03-22"
+compatibility_flags = []
+
+[durable_objects]
+bindings = [
+  { name = "RPC", class_name = "RPC" },
+  { name = "INDEX", class_name = "Index" },
+  { name = "COLLECTION", class_name = "Collection" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RPC"]
+
+[build]
+command = "pnpm build"
+
+[build.upload]
+format = "modules"
+dir = "dist"
+main = "./index.mjs"
+
+[miniflare]
+durable_objects_persist = true
