@@ -1,34 +1,33 @@
 import {
-  WithoutRpcContext,
+  WithoutContext,
   FunctionArguments,
   FunctionResponse,
-  RpcService,
+  Service,
 } from "./types";
 import { RequestMessage, ResponseMessage } from "./message";
 
 export type ClientConfig = {
-  durableObject: DurableObjectStub;
+  namespace: DurableObjectNamespace;
+  durableObjectName: string;
   url: string;
   overwriteRpcPath?: string;
 };
-export class Client<
-  // deno-lint-ignore no-explicit-any
-  TService extends RpcService
-> {
+export class Client<TService extends Service> {
   private durableObject: DurableObjectStub;
   private url: string;
   constructor(config: ClientConfig) {
-    console.log(config);
-    this.durableObject = config.durableObject;
     const url = new URL(config.url);
     url.pathname = config.overwriteRpcPath ?? "/rpc";
     this.url = url.href;
-    console.log(this.url);
+
+    this.durableObject = config.namespace.get(
+      config.namespace.idFromName(config.durableObjectName)
+    );
   }
 
   public async call<TMethod extends keyof TService>(
     method: TMethod,
-    ...args: WithoutRpcContext<FunctionArguments<TService[TMethod]>>
+    ...args: WithoutContext<FunctionArguments<TService[TMethod]>>
   ): Promise<FunctionResponse<TService[TMethod]>> {
     const msg = new RequestMessage<TService>({
       method,

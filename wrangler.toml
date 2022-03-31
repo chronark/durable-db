@@ -1,7 +1,7 @@
-name = "worker"
+name = "durabledb"
 type = "javascript"
 
-account_id = ""
+account_id = "647b3741be0ae16e473c591afe9c62be"
 workers_dev = true
 # route = ""
 # zone_id = ""
@@ -11,14 +11,9 @@ compatibility_flags = []
 
 [durable_objects]
 bindings = [
-  { name = "RPC", class_name = "RPC" },
-  { name = "INDEX", class_name = "Index" },
+  { name = "DOCUMENT", class_name = "Document" },
   { name = "COLLECTION", class_name = "Collection" }
 ]
-
-[[migrations]]
-tag = "v1"
-new_classes = ["RPC"]
 
 [build]
 command = "pnpm build"

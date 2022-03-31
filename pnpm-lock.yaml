@@ -4,6 +4,7 @@ specifiers:
   '@cloudflare/workers-types': ^3.1.1
   '@types/jest': ^27.0.2
   esbuild: ^0.13.13
+  esbuild-darwin-arm64: ^0.14.29
   jest: ^27.3.1
   jest-environment-miniflare: ^2.0.0
   miniflare: ^2.0.0
@@ -19,6 +20,7 @@ devDependencies:
   '@cloudflare/workers-types': 3.4.0
   '@types/jest': 27.4.1
   esbuild: 0.13.15
+  esbuild-darwin-arm64: 0.14.29
   jest: 27.5.1
   jest-environment-miniflare: 2.3.0_jest@27.5.1
   miniflare: 2.3.0
@@ -1301,6 +1303,13 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /esbuild-darwin-arm64/0.14.29:
+    resolution: {integrity: sha512-5Wgz/+zK+8X2ZW7vIbwoZ613Vfr4A8HmIs1XdzRmdC1kG0n5EG5fvKk/jUxhNlrYPx1gSY7XadQ3l4xAManPSw==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [darwin]
+    dev: true
 
   /esbuild-freebsd-64/0.13.15:
     resolution: {integrity: sha512-G3dLBXUI6lC6Z09/x+WtXBXbOYQZ0E8TDBqvn7aMaOCzryJs8LyVXKY4CPnHFXZAbSwkCbqiPuSQ1+HhrNk7EA==}

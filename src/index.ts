@@ -1,37 +1,27 @@
-import { DurableRpcObject } from "./rpc/server";
-import { Client } from "./rpc/client";
-import { RpcContext } from "./rpc/types";
-
-const methods = {
-  hello: (_ctx: RpcContext, s: string) => `Hello ${s}`,
-  getById: async (ctx: RpcContext, id: string): Promise<string | null> => {
-    return (await ctx.state.storage.get(id)) ?? null;
-  },
-  set: async (ctx: RpcContext, id: string, value: unknown): Promise<void> => {
-    return await ctx.state.storage.put(id, value);
-  },
-};
-export class RPC extends DurableRpcObject<typeof methods> {
-  constructor(state: DurableObjectState) {
-    super({ state, methods });
-  }
-}
+import * as rpc from "./rpc";
+import type { CollectionRpc } from "./collection";
+export { Document } from "./document";
+export { Collection } from "./collection";
 
 export async function handleRequest(request: Request, env: Bindings) {
-  // Forward the request to the named Durable Object...
-  const { RPC } = env;
-  const id = RPC.newUniqueId();
-  const durableObject = RPC.get(id);
-  const client = new Client<typeof methods>({
-    durableObject,
+  const users = new rpc.Client<CollectionRpc>({
+    namespace: env.COLLECTION,
+    durableObjectName: "users",
     url: request.url,
   });
 
-  await client.call("set", "id", "hello world");
-  const response = await client.call("getById", "id");
+  const pathname = new URL(request.url).pathname;
+  if (pathname === "/create") {
+    const id = crypto.randomUUID();
+    await users.call("create", { id, data: await request.json() });
+    return new Response(JSON.stringify({ id }), { status: 200 });
+  }
+  if (pathname.startsWith("/read/")) {
+    const id = pathname.replace("/read/", "");
+    return new Response(JSON.stringify(await users.call("read", id)));
+  }
 
-  //   console.log({ response });
-  return new Response(response, { status: 200 });
+  return new Response("Bad pathname", { status: 400 });
 }
 
 const worker: ExportedHandler<Bindings> = { fetch: handleRequest };

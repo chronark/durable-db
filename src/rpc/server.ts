@@ -1,28 +1,24 @@
-import {
-  FunctionArguments,
-  FunctionResponse,
-  RpcMethod,
-  RpcService,
-} from "./types";
+import { FunctionArguments, Service } from "./types";
 import { RequestMessage, ResponseMessage } from "./message";
 
-export type DurableRpcObjectConfig<TService extends RpcService> = {
+export type ServerObjectConfig<TService extends Service> = {
   state: DurableObjectState;
+  env: Bindings;
   methods: TService;
   overwriteRpcPath?: string;
 };
 
 // deno-lint-ignore no-explicit-any
-export class DurableRpcObject<TService extends RpcService>
-  implements DurableObject
-{
-  private state: DurableObjectState;
-  private methods: TService;
+export class ServerObject<TService extends Service> implements DurableObject {
+  protected state: DurableObjectState;
+  protected env: Bindings;
+  protected methods: TService;
 
-  private rpcPathname: string;
+  protected rpcPathname: string;
 
-  constructor(config: DurableRpcObjectConfig<TService>) {
+  constructor(config: ServerObjectConfig<TService>) {
     this.state = config.state;
+    this.env = config.env;
     this.methods = config.methods;
     this.rpcPathname = config.overwriteRpcPath ?? "/rpc";
   }
@@ -38,7 +34,7 @@ export class DurableRpcObject<TService extends RpcService>
     }>(await req.text()).content;
     try {
       const response = await this.methods[method](
-        { state: this.state },
+        { state: this.state, env: this.env, url: req.url },
         ...args
       );
 

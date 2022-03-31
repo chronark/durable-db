@@ -15,6 +15,7 @@ try {
     outdir: path.join(__dirname, "dist"),
     outExtension: { ".js": ".mjs" },
   });
-} catch {
+} catch (err) {
+  console.error(err)
   process.exitCode = 1;
 }

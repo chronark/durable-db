@@ -1,15 +1,11 @@
-import {
-  FunctionArguments,
-  FunctionResponse,
-  WithoutRpcContext,
-} from "./types";
+import { FunctionArguments, FunctionResponse, WithoutContext } from "./types";
 import superjson from "superjson";
 
 export class RequestMessage<TService> {
   constructor(
     public readonly content: {
       method: keyof TService;
-      args: WithoutRpcContext<FunctionArguments<TService[keyof TService]>>;
+      args: WithoutContext<FunctionArguments<TService[keyof TService]>>;
     }
   ) {
     this.content = content;
@@ -22,7 +18,7 @@ export class RequestMessage<TService> {
   static deserialize<TService>(s: string): RequestMessage<TService> {
     const content = superjson.parse(s) as {
       method: keyof TService;
-      args: WithoutRpcContext<FunctionArguments<TService[keyof TService]>>;
+      args: WithoutContext<FunctionArguments<TService[keyof TService]>>;
     };
 
     return new RequestMessage<TService>(content);

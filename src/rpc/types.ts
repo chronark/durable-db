@@ -1,11 +1,13 @@
-export type RpcContext = {
+export type Context = {
   state: DurableObjectState;
+  env: Bindings;
+  url: string;
 };
 
-export type RpcService = Record<string, RpcMethod<any, any>>;
+export type Service = Record<string | symbol, RpcMethod<any, any>>;
 
 export type RpcMethod<TRequest extends unknown[], TResponse> = (
-  ctx: RpcContext,
+  ctx: Context,
   ...req: TRequest
 ) => TResponse;
 
@@ -20,10 +22,10 @@ export type FunctionResponse<F> = F extends (...args: any[]) => infer R
   ? R
   : never;
 
-export type WithoutRpcContext<T extends unknown[]> = T extends []
+export type WithoutContext<T extends unknown[]> = T extends []
   ? []
   : T extends [infer H, ...infer R]
-  ? H extends RpcContext
-    ? WithoutRpcContext<R>
-    : [H, ...WithoutRpcContext<R>]
+  ? H extends Context
+    ? WithoutContext<R>
+    : [H, ...WithoutContext<R>]
   : T;

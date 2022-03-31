@@ -1,0 +1,142 @@
+import { DurableRpcObject } from "./rpc/server";
+import { Client } from "./rpc/client";
+import { RpcContext } from "./rpc/types";
+
+type ID = string;
+type Data = string | number | boolean;
+export type ValuesOf<T extends any[]> = T[number];
+
+type Document<TData> = {
+  id: ID;
+  data: TData;
+};
+
+type IndexRpc<
+  TData extends Record<string, Data>,
+  TTerms extends (keyof TData)[]
+> = {
+  index: (
+    ctx: RpcContext,
+    documents: Document<TData>[],
+    opts?: { clear: boolean }
+  ) => Promise<void>;
+  remove: (ctX: RpcContext, ids: ID[]) => Promise<void>;
+  match: (
+    matches: Partial<Record<ValuesOf<TTerms>, Data>>
+  ) => Promise<Document<TData>[]>;
+};
+
+class Index<TData extends Record<string, Data>, TTerms extends (keyof TData)[]>
+  implements IndexRpc<TData, TTerms>
+{
+  public readonly id: string;
+  public readonly name: string;
+  //   private readonly collection: Collection<TData>;
+  private termFields: TTerms;
+  private state: DurableObjectState;
+
+  constructor(config: {
+    state: DurableObjectState;
+    name: string;
+    termFields: TTerms;
+  }) {
+    this.id = crypto.randomUUID();
+    this.name = config.name;
+    // this.collection = collection;
+    this.termFields = config.termFields;
+    this.state = config.state;
+  }
+
+  private key(terms: Partial<Record<ValuesOf<TTerms>, Data>>): string {
+    return [this.id, this.hashTerms(terms)].join("_");
+  }
+
+  private hashTerms = (
+    terms: Partial<Record<ValuesOf<TTerms>, Data>>
+  ): string => {
+    return Object.entries(terms)
+      .map((term) => term.join(":"))
+      .join("__");
+  };
+  public async index(
+    ctx: RpcContext,
+    documents: Document<TData>[],
+    opts?: { clear: boolean }
+  ): Promise<void> {
+    for (const document of documents) {
+      const terms = this.termFields.reduce((acc, field) => {
+        acc[field] = document.data[field];
+        return acc;
+      }, {} as Record<keyof TData, Data>);
+
+      const key = this.key(terms);
+
+      const existing = (await this.state.storage.get<ID[]>(key)) ?? [];
+      await this.state.storage.put(key, [
+        ...new Set([...existing, document.id]),
+      ]);
+    }
+  }
+
+  public async remove(ctx: RpcContext, ids: ID[]): Promise<void> {
+    for (const indexed of Object.entries(this.map)) {
+      for (const id of indexed[1]) {
+        if (ids.includes(id)) {
+          this.map[indexed[0]]!.splice(this.map[indexed[0]]!.indexOf(id), 1);
+        }
+      }
+    }
+  }
+
+  public async match(
+    ctx: RpcContext,
+    matches: Partial<Record<ValuesOf<TTerms>, Data>>
+  ): Promise<Document<TData>[]> {
+    console.time("hash");
+    const key = this.hashTerms(matches);
+    console.log({ key });
+    console.timeEnd("hash");
+    console.time("ids");
+    const ids = this.map[key] ?? [];
+    console.timeEnd("ids");
+    console.time("documents");
+    console.log({ ids });
+    const documents = await Promise.all(
+      ids.map(async (id) => await this.collection.readDocument(id))
+    );
+    console.timeEnd("documents");
+    console.time("filter");
+    const filtered = documents.filter(
+      (d) => !!d
+    ) as unknown as Document<TData>[];
+    console.timeEnd("filter");
+    return filtered;
+  }
+}
+export class RPC extends DurableRpcObject<IndexRpc> {
+  constructor(state: DurableObjectState) {
+    super({ state, methods: new Index({ state }) });
+  }
+}
+
+export async function handleRequest(request: Request, env: Bindings) {
+  // Forward the request to the named Durable Object...
+  const { RPC } = env;
+  const id = RPC.newUniqueId();
+  const durableObject = RPC.get(id);
+  const client = new Client<IndexRpc>({
+    durableObject,
+    url: request.url,
+  });
+
+  await client.call("set", "id", "hello world");
+  const response = await client.call("getById", "id");
+
+  //   console.log({ response });
+  return new Response(response, { status: 200 });
+}
+
+const worker: ExportedHandler<Bindings> = { fetch: handleRequest };
+
+// Make sure we export the Counter Durable Object class
+export default worker;
